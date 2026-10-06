@@ -4,8 +4,70 @@
       "id": 1791201757170,
       "nome": "thiago",
       "telefone": "21981055848"
+    },
+    {
+      "id": 1791292536868,
+      "nome": "cunhado",
+      "telefone": "21980549084"
+    },
+    {
+      "id": 1791292730468,
+      "nome": "pai",
+      "telefone": "21920014075"
     }
   ],
-  "produtos": [],
-  "lancamentos": []
+  "produtos": [
+    {
+      "id": 1791292177189,
+      "nome": "bolo",
+      "preco": 10
+    },
+    {
+      "id": 1791292516620,
+      "nome": "torta",
+      "preco": 15
+    }
+  ],
+  "lancamentos": [
+    {
+      "id": 1791292252916,
+      "cliente_id": 1791201757170,
+      "descricao": "bolo",
+      "valor": 10,
+      "data": "2026-10-06",
+      "status": "PENDENTE"
+    },
+    {
+      "id": 1791292550676,
+      "cliente_id": 1791292536868,
+      "descricao": "bolo",
+      "valor": 10,
+      "data": "2026-10-06",
+      "status": "PENDENTE"
+    },
+    {
+      "id": 1791292554331,
+      "cliente_id": 1791292536868,
+      "descricao": "torta",
+      "valor": 15,
+      "data": "2026-10-06",
+      "status": "PENDENTE"
+    },
+    {
+      "id": 1791292736979,
+      "cliente_id": 1791292730468,
+      "descricao": "bolo",
+      "valor": 10,
+      "data": "2026-10-06",
+      "status": "PENDENTE"
+    },
+    {
+      "id": 1791292739443,
+      "cliente_id": 1791292730468,
+      "descricao": "torta",
+      "valor": 15,
+      "data": "2026-10-06",
+      "status": "PENDENTE"
+    }
+  ]
 }
