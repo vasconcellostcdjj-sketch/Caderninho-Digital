@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const url = require('url');
 
-const PORT = 3000;
+const PORT = const PORT = process.env.PORT || 3000;
 const DB_FILE = path.join(__dirname, 'banco.json');
 
 // Inicializa banco de dados
@@ -488,6 +488,6 @@ const server = http.createServer((req, res) => {
   res.end('Não encontrado');
 });
 
-server.listen(PORT, () => {
+server.listenserver.listen(PORT, '0.0.0.0', () => {
   console.log(`Sistema rodando com sucesso! Acesse no navegador: http://localhost:${PORT}`);
 });
