@@ -17,8 +17,11 @@
     .btn-blue { background: #2563eb; color: white; }
     .btn-blue:hover { background: #1d4ed8; }
     .btn-orange { background: #ea580c; color: white; margin-top: 8px; }
+    .btn-orange:hover { background: #c2410c; }
     .btn-pix { background: #0284c7; color: white; margin-top: 8px; }
+    .btn-pix:hover { background: #0369a1; }
     .btn-wpp { background: #16a34a; color: white; margin-top: 10px; }
+    .btn-wpp:hover { background: #15803d; }
     .btn-pay { background: #059669; color: white; margin-top: 8px; }
     .client-list { list-style: none; padding: 0; margin: 0; max-height: 250px; overflow-y: auto; }
     .client-item { padding: 12px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; cursor: pointer; border-radius: 6px; }
@@ -34,7 +37,9 @@
 <body>
 
   <div class="container">
+    <!-- COLUNA DA ESQUERDA: CONFIGS, PRODUTOS E CLIENTES -->
     <div>
+      <!-- CHAVE PIX -->
       <div class="card pix-box">
         <h3 style="color: #166534; font-size: 15px; margin-bottom: 4px;">⚙️ Minha Chave Pix</h3>
         <label>Chave Pix:</label>
@@ -44,6 +49,7 @@
         <button class="btn-pix" onclick="salvarConfigPix()">💾 Salvar Chave Pix</button>
       </div>
 
+      <!-- CADASTRO DE PRODUTOS -->
       <div class="card prod-box">
         <h3 style="color: #9a3412; font-size: 15px; margin-bottom: 4px;">🍰 Cadastrar Produto / Preço</h3>
         <label>Nome do Produto:</label>
@@ -53,21 +59,24 @@
         <button class="btn-orange" onclick="cadastrarProduto()">+ Salvar Produto no Catálogo</button>
       </div>
 
+      <!-- NOVO CLIENTE -->
       <div class="card">
         <h3>Novo Cliente</h3>
         <label>Nome:</label>
         <input type="text" id="novoNome" placeholder="Ex: Thiago" />
         <label>WhatsApp (com DDD):</label>
-        <input type="text" id="novoTel" placeholder="Ex: 21999998888" />
+        <input type="text" id="novoTel" placeholder="Ex: 82999998888" />
         <button class="btn-blue" onclick="cadastrarCliente()">+ Cadastrar Cliente</button>
       </div>
 
+      <!-- LISTA DE CLIENTES -->
       <div class="card">
         <h3>Clientes Cadastrados</h3>
         <ul id="listaClientes" class="client-list"></ul>
       </div>
     </div>
 
+    <!-- COLUNA DA DIREITA: CADERNO DO CLIENTE SELECIONADO -->
     <div>
       <div class="card">
         <h3 id="tituloCliente">Selecione um cliente ao lado</h3>
@@ -76,6 +85,7 @@
           <label>Data:</label>
           <input type="date" id="lancData" />
 
+          <!-- SELEÇÃO RÁPIDA DE PRODUTO -->
           <label>Escolher Produto do Catálogo (Opcional):</label>
           <select id="selectProduto" onchange="selecionarProdutoCatalogo()">
             <option value="">-- Escolha um produto ou digite abaixo --</option>
@@ -122,10 +132,8 @@
     let lancamentosAtuais = [];
     let precoUnitarioAtual = 0;
 
-    const elPixChave = document.getElementById("configPixChave");
-    const elPixNome = document.getElementById("configPixNome");
-    if (elPixChave) elPixChave.value = localStorage.getItem("pix_chave") || "";
-    if (elPixNome) elPixNome.value = localStorage.getItem("pix_nome") || "";
+    document.getElementById("configPixChave").value = localStorage.getItem("pix_chave") || "";
+    document.getElementById("configPixNome").value = localStorage.getItem("pix_nome") || "";
     document.getElementById("lancData").value = new Date().toISOString().split('T')[0];
 
     function salvarConfigPix() {
@@ -134,21 +142,18 @@
       alert("Configurações do Pix salvas!");
     }
 
+    // --- CARREGAR DADOS ---
     async function carregarProdutos() {
-      try {
-        const res = await fetch('/api/produtos');
-        produtos = await res.json();
-        const select = document.getElementById("selectProduto");
-        select.innerHTML = '<option value="">-- Escolha um produto ou digite abaixo --</option>';
-        produtos.forEach(p => {
-          const opt = document.createElement("option");
-          opt.value = p.id;
-          opt.innerText = p.nome + ' - R$ ' + p.preco.toFixed(2);
-          select.appendChild(opt);
-        });
-      } catch (e) {
-        console.error("Erro ao carregar produtos:", e);
-      }
+      const res = await fetch('/api/produtos');
+      produtos = await res.json();
+      const select = document.getElementById("selectProduto");
+      select.innerHTML = '<option value="">-- Escolha um produto ou digite abaixo --</option>';
+      produtos.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p.id;
+        opt.innerText = `${p.nome} - R$ ${p.preco.toFixed(2)}`;
+        select.appendChild(opt);
+      });
     }
 
     async function cadastrarProduto() {
@@ -186,23 +191,21 @@
     }
 
     async function carregarClientes() {
-      try {
-        const res = await fetch('/api/clientes');
-        clientes = await res.json();
-        const ul = document.getElementById("listaClientes");
-        ul.innerHTML = "";
+      const res = await fetch('/api/clientes');
+      clientes = await res.json();
+      const ul = document.getElementById("listaClientes");
+      ul.innerHTML = "";
 
-        clientes.forEach(c => {
-          const li = document.createElement("li");
-          li.className = 'client-item' + (clienteAtual && clienteAtual.id === c.id ? ' active' : '');
-          li.innerHTML = '<div><strong>' + c.nome + '</strong><br><small style="color:#6b7280;">' + c.telefone + '</small></div>' +
-                         '<span class="badge">R$ ' + parseFloat(c.total_devido).toFixed(2) + '</span>';
-          li.onclick = () => selecionarCliente(c);
-          ul.appendChild(li);
-        });
-      } catch (e) {
-        console.error("Erro ao carregar clientes:", e);
-      }
+      clientes.forEach(c => {
+        const li = document.createElement("li");
+        li.className = `client-item ${clienteAtual && clienteAtual.id === c.id ? 'active' : ''}`;
+        li.innerHTML = `
+          <div><strong>${c.nome}</strong><br><small style="color:#6b7280;">${c.telefone}</small></div>
+          <span class="badge">R$ ${parseFloat(c.total_devido).toFixed(2)}</span>
+        `;
+        li.onclick = () => selecionarCliente(c);
+        ul.appendChild(li);
+      });
     }
 
     async function cadastrarCliente() {
@@ -223,7 +226,7 @@
 
     async function selecionarCliente(c) {
       clienteAtual = c;
-      document.getElementById("tituloCliente").innerText = 'Caderno de: ' + c.nome;
+      document.getElementById("tituloCliente").innerText = `Caderno de: ${c.nome}`;
       document.getElementById("painelLancamento").style.display = "block";
       await carregarLancamentos();
       await carregarClientes();
@@ -231,27 +234,25 @@
 
     async function carregarLancamentos() {
       if (!clienteAtual) return;
-      try {
-        const res = await fetch('/api/clientes/' + clienteAtual.id + '/lancamentos');
-        lancamentosAtuais = await res.json();
-        const tbody = document.getElementById("tabelaLancamentos");
-        tbody.innerHTML = "";
-        let total = 0;
+      const res = await fetch(`/api/clientes/${clienteAtual.id}/lancamentos`);
+      lancamentosAtuais = await res.json();
+      const tbody = document.getElementById("tabelaLancamentos");
+      tbody.innerHTML = "";
+      let total = 0;
 
-        lancamentosAtuais.forEach(l => {
-          if (l.status === 'PENDENTE') total += l.valor;
-          const tr = document.createElement("tr");
-          tr.innerHTML = '<td>' + l.data + '</td>' +
-                         '<td>' + l.descricao + '</td>' +
-                         '<td>R$ ' + parseFloat(l.valor).toFixed(2) + '</td>' +
-                         '<td style="color:' + (l.status === 'PAGO' ? '#059669' : '#dc2626') + '; font-weight:bold;">' + l.status + '</td>';
-          tbody.appendChild(tr);
-        });
+      lancamentosAtuais.forEach(l => {
+        if (l.status === 'PENDENTE') total += l.valor;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${l.data}</td>
+          <td>${l.descricao}</td>
+          <td>R$ ${parseFloat(l.valor).toFixed(2)}</td>
+          <td style="color:${l.status === 'PAGO' ? '#059669' : '#dc2626'}; font-weight:bold;">${l.status}</td>
+        `;
+        tbody.appendChild(tr);
+      });
 
-        document.getElementById("spanTotalDevido").innerText = total.toFixed(2);
-      } catch (e) {
-        console.error("Erro ao carregar lançamentos:", e);
-      }
+      document.getElementById("spanTotalDevido").innerText = total.toFixed(2);
     }
 
     async function adicionarLancamento() {
@@ -265,7 +266,7 @@
       }
 
       if (qtd > 1) {
-        desc = qtd + 'x ' + desc;
+        desc = `${qtd}x${desc}`;
       }
 
       await fetch('/api/lancamentos', {
@@ -285,8 +286,8 @@
     }
 
     async function darBaixa() {
-      if (!confirm('Deseja quitar a conta de ' + clienteAtual.nome + '?')) return;
-      await fetch('/api/clientes/' + clienteAtual.id + '/pagar', { method: 'POST' });
+      if (!confirm(`Deseja quitar a conta de ${clienteAtual.nome}?`)) return;
+      await fetch(`/api/clientes/${clienteAtual.id}/pagar`, { method: 'POST' });
       await carregarLancamentos();
       await carregarClientes();
     }
@@ -300,25 +301,34 @@
 
       pendentes.forEach(item => {
         total += item.valor;
-        textoItens += '• ' + item.data + ' - ' + item.descricao + ': R$ ' + item.valor.toFixed(2) + '\n';
+        textoItens += `• ${item.data} -${item.descricao}: R$ ${item.valor.toFixed(2)}\n`;
       });
 
       const tel = clienteAtual.telefone.replace(/\D/g, "");
       const pixChave = localStorage.getItem("pix_chave") || "";
       const pixNome = localStorage.getItem("pix_nome") || "";
 
-      let msg = 'Olá, *' + clienteAtual.nome + '*! Tudo bem?\n\n';
-      msg += 'Segue o extrato dos seus consumos no caderninho:\n\n';
+      let msg = `Olá, *${clienteAtual.nome}*! Tudo bem?\n\n`;
+      msg += `Segue o extrato dos seus consumos no caderninho:\n\n`;
       msg += textoItens;
-      msg += '\n*Total a acertar: R$ ' + total.toFixed(2) + '*';
+      msg += `\n*Total a acertar: R$ ${total.toFixed(2)}*`;
 
       if (pixChave) {
-        msg += '\n\n══════════════════';
-        msg += '\n*PAGAMENTO VIA PIX:*';
-        if (pixNome) msg += '\nFavorecido: ' + pixNome;
-        msg += '\nChave Pix: ' + pixChave;
-        msg += '\n_(Copie a chave e pague no seu banco)_';
-        msg += '\n══════════════════';
+        msg += `\n\n══════════════════`;
+        msg += `\n*PAGAMENTO VIA PIX:*`;
+        if (pixNome) msg += `\nFavorecido: ${pixNome}`;
+        msg += `\nChave Pix: \`${pixChave}\``;
+        msg += `\n_(Copie a chave e pague no seu banco)_`;
+        msg += `\n══════════════════`;
       }
 
-      msg += '\n\nQualquer dúvida estou
+      msg += `\n\nQualquer dúvida estou à disposição!`;
+
+      window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, "_blank");
+    }
+
+    carregarProdutos();
+    carregarClientes();
+  </script>
+</body>
+</html>
