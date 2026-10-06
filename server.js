@@ -166,4 +166,328 @@ const HTML_PAGE = `<!DOCTYPE html>
 
     async function carregarProdutos() {
       try {
-        const res = await fetch('/api/
+        const res = await fetch('/api/produtos');
+        produtos = await res.json();
+        const select = document.getElementById("selectProduto");
+        select.innerHTML = '<option value="">-- Escolha um produto ou digite abaixo --</option>';
+        produtos.forEach(p => {
+          const opt = document.createElement("option");
+          opt.value = p.id;
+          opt.innerText = p.nome + ' - R$ ' + p.preco.toFixed(2);
+          select.appendChild(opt);
+        });
+      } catch (e) {
+        console.error("Erro ao carregar produtos:", e);
+      }
+    }
+
+    async function cadastrarProduto() {
+      const nome = document.getElementById("novoProdNome").value.trim();
+      const preco = parseFloat(document.getElementById("novoProdPreco").value);
+      if (!nome || isNaN(preco) || preco <= 0) return alert("Preencha nome e preço válido!");
+
+      await fetch('/api/produtos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, preco })
+      });
+
+      document.getElementById("novoProdNome").value = "";
+      document.getElementById("novoProdPreco").value = "";
+      alert("Produto cadastrado com sucesso!");
+      carregarProdutos();
+    }
+
+    function selecionarProdutoCatalogo() {
+      const prodId = Number(document.getElementById("selectProduto").value);
+      const prod = produtos.find(p => p.id === prodId);
+      if (prod) {
+        document.getElementById("lancDesc").value = prod.nome;
+        precoUnitarioAtual = prod.preco;
+        recalcularSubtotal();
+      }
+    }
+
+    function recalcularSubtotal() {
+      const qtd = parseInt(document.getElementById("lancQtd").value) || 1;
+      if (precoUnitarioAtual > 0) {
+        document.getElementById("lancValor").value = (precoUnitarioAtual * qtd).toFixed(2);
+      }
+    }
+
+    async function carregarClientes() {
+      try {
+        const res = await fetch('/api/clientes');
+        clientes = await res.json();
+        const ul = document.getElementById("listaClientes");
+        ul.innerHTML = "";
+
+        clientes.forEach(c => {
+          const li = document.createElement("li");
+          li.className = 'client-item' + (clienteAtual && clienteAtual.id === c.id ? ' active' : '');
+          li.innerHTML = '<div><strong>' + c.nome + '</strong><br><small style="color:#6b7280;">' + c.telefone + '</small></div>' +
+                         '<span class="badge">R$ ' + parseFloat(c.total_devido).toFixed(2) + '</span>';
+          li.onclick = () => selecionarCliente(c);
+          ul.appendChild(li);
+        });
+      } catch (e) {
+        console.error("Erro ao carregar clientes:", e);
+      }
+    }
+
+    async function cadastrarCliente() {
+      const nome = document.getElementById("novoNome").value.trim();
+      const telefone = document.getElementById("novoTel").value.trim();
+      if (!nome || !telefone) return alert("Digite nome e telefone!");
+
+      await fetch('/api/clientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, telefone })
+      });
+
+      document.getElementById("novoNome").value = "";
+      document.getElementById("novoTel").value = "";
+      carregarClientes();
+    }
+
+    async function selecionarCliente(c) {
+      clienteAtual = c;
+      document.getElementById("tituloCliente").innerText = 'Caderno de: ' + c.nome;
+      document.getElementById("painelLancamento").style.display = "block";
+      await carregarLancamentos();
+      await carregarClientes();
+    }
+
+    async function carregarLancamentos() {
+      if (!clienteAtual) return;
+      try {
+        const res = await fetch('/api/clientes/' + clienteAtual.id + '/lancamentos');
+        lancamentosAtuais = await res.json();
+        const tbody = document.getElementById("tabelaLancamentos");
+        tbody.innerHTML = "";
+        let total = 0;
+
+        lancamentosAtuais.forEach(l => {
+          if (l.status === 'PENDENTE') total += l.valor;
+          const tr = document.createElement("tr");
+          tr.innerHTML = '<td>' + l.data + '</td>' +
+                         '<td>' + l.descricao + '</td>' +
+                         '<td>R$ ' + parseFloat(l.valor).toFixed(2) + '</td>' +
+                         '<td style="color:' + (l.status === 'PAGO' ? '#059669' : '#dc2626') + '; font-weight:bold;">' + l.status + '</td>';
+          tbody.appendChild(tr);
+        });
+
+        document.getElementById("spanTotalDevido").innerText = total.toFixed(2);
+      } catch (e) {
+        console.error("Erro ao carregar lançamentos:", e);
+      }
+    }
+
+    async function adicionarLancamento() {
+      let desc = document.getElementById("lancDesc").value.trim();
+      const qtd = parseInt(document.getElementById("lancQtd").value) || 1;
+      const valor = parseFloat(document.getElementById("lancValor").value);
+      const data = document.getElementById("lancData").value;
+
+      if (!desc || isNaN(valor) || valor <= 0) {
+        return alert("Preencha descrição e valor válidos!");
+      }
+
+      if (qtd > 1) {
+        desc = qtd + 'x ' + desc;
+      }
+
+      await fetch('/api/lancamentos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cliente_id: clienteAtual.id, descricao: desc, valor, data })
+      });
+
+      document.getElementById("lancDesc").value = "";
+      document.getElementById("lancValor").value = "";
+      document.getElementById("selectProduto").value = "";
+      document.getElementById("lancQtd").value = "1";
+      precoUnitarioAtual = 0;
+
+      await carregarLancamentos();
+      await carregarClientes();
+    }
+
+    async function darBaixa() {
+      if (!confirm('Deseja quitar a conta de ' + clienteAtual.nome + '?')) return;
+      await fetch('/api/clientes/' + clienteAtual.id + '/pagar', { method: 'POST' });
+      await carregarLancamentos();
+      await carregarClientes();
+    }
+
+    function cobrarWhatsApp() {
+      const pendentes = lancamentosAtuais.filter(l => l.status === 'PENDENTE');
+      if (pendentes.length === 0) return alert("Não há débitos pendentes!");
+
+      let total = 0;
+      let textoItens = "";
+
+      pendentes.forEach(item => {
+        total += item.valor;
+        textoItens += '• ' + item.data + ' - ' + item.descricao + ': R$ ' + item.valor.toFixed(2) + '\\n';
+      });
+
+      const tel = clienteAtual.telefone.replace(/\\D/g, "");
+      const pixChave = localStorage.getItem("pix_chave") || "";
+      const pixNome = localStorage.getItem("pix_nome") || "";
+
+      let msg = 'Olá, *' + clienteAtual.nome + '*! Tudo bem?\\n\\n';
+      msg += 'Segue o extrato dos seus consumos no caderninho:\\n\\n';
+      msg += textoItens;
+      msg += '\\n*Total a acertar: R$ ' + total.toFixed(2) + '*';
+
+      if (pixChave) {
+        msg += '\\n\\n══════════════════';
+        msg += '\\n*PAGAMENTO VIA PIX:*';
+        if (pixNome) msg += '\\nFavorecido: ' + pixNome;
+        msg += '\\nChave Pix: `' + pixChave + '`';
+        msg += '\\n_(Copie a chave e pague no seu banco)_';
+        msg += '\\n══════════════════';
+      }
+
+      msg += '\\n\\nQualquer dúvida estou à disposição!';
+
+      window.open('https://wa.me/55' + tel + '?text=' + encodeURIComponent(msg), "_blank");
+    }
+
+    carregarProdutos();
+    carregarClientes();
+  </script>
+</body>
+</html>`;
+
+const server = http.createServer((req, res) => {
+  const parsedUrl = url.parse(req.url, true);
+  const pathname = parsedUrl.pathname;
+
+  // Rota principal: entrega o HTML completo garantido
+  if (req.method === 'GET' && (pathname === '/' || pathname === '/index.html')) {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    return res.end(HTML_PAGE);
+  }
+
+  function readBody(callback) {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      try {
+        callback(JSON.parse(body || '{}'));
+      } catch (e) {
+        callback({});
+      }
+    });
+  }
+
+  // Clientes
+  if (req.method === 'GET' && pathname === '/api/clientes') {
+    const db = lerBanco();
+    const lista = db.clientes.map(c => {
+      const total = db.lancamentos
+        .filter(l => l.cliente_id === c.id && l.status === 'PENDENTE')
+        .reduce((sum, item) => sum + item.valor, 0);
+      return { ...c, total_devido: total };
+    });
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify(lista));
+  }
+
+  if (req.method === 'POST' && pathname === '/api/clientes') {
+    return readBody(body => {
+      const { nome, telefone } = body;
+      if (!nome || !telefone) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: 'Nome e telefone obrigatórios.' }));
+      }
+      const db = lerBanco();
+      const novo = { id: Date.now(), nome, telefone };
+      db.clientes.push(novo);
+      salvarBanco(db);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ...novo, total_devido: 0 }));
+    });
+  }
+
+  // Produtos
+  if (req.method === 'GET' && pathname === '/api/produtos') {
+    const db = lerBanco();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify(db.produtos || []));
+  }
+
+  if (req.method === 'POST' && pathname === '/api/produtos') {
+    return readBody(body => {
+      const { nome, preco } = body;
+      if (!nome || isNaN(preco)) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: 'Dados inválidos.' }));
+      }
+      const db = lerBanco();
+      const novoProduto = { id: Date.now(), nome, preco: parseFloat(preco) };
+      db.produtos.push(novoProduto);
+      salvarBanco(db);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(novoProduto));
+    });
+  }
+
+  // Lançamentos
+  const lancMatch = pathname.match(/^\/api\/clientes\/(\d+)\/lancamentos$/);
+  if (req.method === 'GET' && lancMatch) {
+    const id = Number(lancMatch[1]);
+    const db = lerBanco();
+    const itens = db.lancamentos.filter(l => l.cliente_id === id).reverse();
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify(itens));
+  }
+
+  if (req.method === 'POST' && pathname === '/api/lancamentos') {
+    return readBody(body => {
+      const { cliente_id, descricao, valor, data } = body;
+      if (!cliente_id || !descricao || !valor) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: 'Dados incompletos.' }));
+      }
+      const db = lerBanco();
+      const novoItem = {
+        id: Date.now(),
+        cliente_id: Number(cliente_id),
+        descricao,
+        valor: parseFloat(valor),
+        data: data || new Date().toISOString().split('T')[0],
+        status: 'PENDENTE'
+      };
+      db.lancamentos.push(novoItem);
+      salvarBanco(db);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(novoItem));
+    });
+  }
+
+  // Quitar conta
+  const pagarMatch = pathname.match(/^\/api\/clientes\/(\d+)\/pagar$/);
+  if (req.method === 'POST' && pagarMatch) {
+    const id = Number(pagarMatch[1]);
+    const db = lerBanco();
+    db.lancamentos.forEach(l => {
+      if (l.cliente_id === id && l.status === 'PENDENTE') {
+        l.status = 'PAGO';
+      }
+    });
+    salvarBanco(db);
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    return res.end(JSON.stringify({ ok: true }));
+  }
+
+  res.writeHead(404, { 'Content-Type': 'text/plain' });
+  res.end('Não encontrado');
+});
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Sistema rodando com sucesso! Acesse no navegador: http://localhost:${PORT}`);
+});
